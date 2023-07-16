@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lemon.distributed.lock.mapper.StockMapper;
 import com.lemon.distributed.lock.pojo.Stock;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -27,23 +30,60 @@ public class StockService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+
     public void deduct() {
-        //1.查询库存信息
-        String stock = this.redisTemplate.opsForValue().get("stock");
-        System.out.println("stock:" + stock);
-        //2.判断库存是否充足
-        if(stock != null && stock.length() != 0){
-            Integer st = Integer.valueOf(stock);
-            if(st>0){
-                //3.扣减库存
-                this.redisTemplate.opsForValue().set("stock",String.valueOf(--st));
+        this.redisTemplate.execute(new SessionCallback<Object>() {
+            public Object execute(RedisOperations redisTemplate) throws DataAccessException {
+                //  watch
+                redisTemplate.watch("stock");
+                //1.查询库存信息
+                String stock = redisTemplate.opsForValue().get("stock").toString();
+                System.out.println("stock:" + stock);
+                //2.判断库存是否充足
+                if (stock != null && stock.length() != 0) {
+                    Integer st = Integer.valueOf(stock);
+                    if (st > 0) {
+                        //  multi
+                        redisTemplate.multi();
+                        //3.扣减库存
+                        redisTemplate.opsForValue().set("stock", String.valueOf(--st));
+                        //exec执行事务
+                        List exec = redisTemplate.exec();
+                        if (exec == null || exec.size() == 0) {
+                            try {
+                                Thread.sleep(40);
+                                deduct();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        return exec;
+                    }
+                }
+
+                return null;
+
             }
-        }
+        });
 
 
     }
 
 
+    public void deduct4() {
+        //1.查询库存信息
+        String stock = this.redisTemplate.opsForValue().get("stock");
+        System.out.println("stock:" + stock);
+        //2.判断库存是否充足
+        if (stock != null && stock.length() != 0) {
+            Integer st = Integer.valueOf(stock);
+            if (st > 0) {
+                //3.扣减库存
+                this.redisTemplate.opsForValue().set("stock", String.valueOf(--st));
+            }
+        }
+    }
 
 
     private ReentrantLock lock = new ReentrantLock();
