@@ -32,6 +32,40 @@ public class StockService {
 
 
     public void deduct() {
+        //  加锁setnx
+        Boolean lock = this.redisTemplate.opsForValue().setIfAbsent("lock", "111");
+        //  重试，递归调用
+        if (!lock) {
+            try {
+                Thread.sleep(50);
+                this.deduct();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } else {
+            try {
+                //  1.查询库存信息
+                String stock = redisTemplate.opsForValue().get("stock").toString();
+
+                //  2.判断库存是否充足
+                if (stock != null && stock.length() != 0) {
+                    Integer st = Integer.valueOf(stock);
+                    if (st > 0) {
+                        //  3.扣减库存
+                        redisTemplate.opsForValue().set("stock", String.valueOf(--st));
+                    }
+                }
+            } finally {
+                //  解锁
+                this.redisTemplate.delete("lock");
+            }
+        }
+
+
+    }
+
+
+    public void deduct5() {
         this.redisTemplate.execute(new SessionCallback<Object>() {
             public Object execute(RedisOperations redisTemplate) throws DataAccessException {
                 //  watch
@@ -52,7 +86,7 @@ public class StockService {
                         if (exec == null || exec.size() == 0) {
                             try {
                                 Thread.sleep(40);
-                                deduct();
+                                deduct5();
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
