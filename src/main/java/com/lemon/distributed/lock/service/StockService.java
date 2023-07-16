@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lemon.distributed.lock.mapper.StockMapper;
 import com.lemon.distributed.lock.pojo.Stock;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,33 @@ public class StockService {
     @Autowired
     private StockMapper stockMapper;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    public void deduct() {
+        //1.查询库存信息
+        String stock = this.redisTemplate.opsForValue().get("stock");
+        System.out.println("stock:" + stock);
+        //2.判断库存是否充足
+        if(stock != null && stock.length() != 0){
+            Integer st = Integer.valueOf(stock);
+            if(st>0){
+                //3.扣减库存
+                this.redisTemplate.opsForValue().set("stock",String.valueOf(--st));
+            }
+        }
+
+
+    }
+
+
+
+
     private ReentrantLock lock = new ReentrantLock();
 
 
     //    @Transactional
-    public void deduct() {
+    public void deduct3() {
         //1.查询库存信息并锁定库存信息
         List<Stock> stocks = this.stockMapper.selectList(new QueryWrapper<Stock>().eq("product_code", "1001"));
         //这里取第一个库存
