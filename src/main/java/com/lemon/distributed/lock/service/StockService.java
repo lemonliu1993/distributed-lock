@@ -1,6 +1,7 @@
 package com.lemon.distributed.lock.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lemon.distributed.lock.mapper.StockMapper;
 import com.lemon.distributed.lock.pojo.Stock;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +25,34 @@ public class StockService {
 
     private ReentrantLock lock = new ReentrantLock();
 
-    @Transactional
+
+    //    @Transactional
     public void deduct() {
+        //1.查询库存信息并锁定库存信息
+        List<Stock> stocks = this.stockMapper.selectList(new QueryWrapper<Stock>().eq("product_code", "1001"));
+        //这里取第一个库存
+        Stock stock = stocks.get(0);
+        //2.判断库存是否充足
+        if (stock != null && stock.getCount() > 0) {
+            //3.扣减库存
+            stock.setCount(stock.getCount() - 1);
+            Integer version = stock.getVersion();
+            stock.setVersion(version + 1);
+            //mybatis 能获得sql的返回值，0为更新条数为0
+            if (this.stockMapper.update(stock, new UpdateWrapper<Stock>().eq("id", stock.getId()).eq("version", version)) == 0) {
+                //  如果更新失败，则进行重试
+                try {
+                    Thread.sleep(20);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                this.deduct();
+            }
+        }
+    }
+
+    @Transactional
+    public void deduct2() {
         //1.查询库存信息并锁定库存信息
         List<Stock> stocks = this.stockMapper.queryStock("1001");
         //这里取第一个库存
