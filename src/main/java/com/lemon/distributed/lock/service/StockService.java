@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lemon.distributed.lock.mapper.StockMapper;
 import com.lemon.distributed.lock.pojo.Stock;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
@@ -15,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -31,8 +34,9 @@ public class StockService {
     private StringRedisTemplate redisTemplate;
 
     public void deduct() {
+        String uuid = UUID.randomUUID().toString();
         //  加锁setnx
-        while (!this.redisTemplate.opsForValue().setIfAbsent("lock", "111")) {
+        while (!this.redisTemplate.opsForValue().setIfAbsent("lock", uuid, 5, TimeUnit.SECONDS)) {
             //  重试:循环
             try {
                 Thread.sleep(50);
@@ -54,8 +58,11 @@ public class StockService {
                 }
             }
         } finally {
-            //  解锁
-            this.redisTemplate.delete("lock");
+            //  先判断是否自己的锁，再解锁
+            if (StringUtils.equals(this.redisTemplate.opsForValue().get("lock"), uuid)) {
+                //  解锁
+                this.redisTemplate.delete("lock");
+            }
         }
 
 
