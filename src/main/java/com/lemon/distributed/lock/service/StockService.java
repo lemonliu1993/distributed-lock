@@ -57,11 +57,17 @@ public class StockService {
                     redisTemplate.opsForValue().set("stock", String.valueOf(--st));
                 }
             }
+            this.test();
         } finally {
             redisLock.unlock();
         }
+    }
 
-
+    public void test(){
+        DistributedRedisLock lock = this.distributedLockClient.getRedisLock("lock");
+        lock.lock();
+        System.out.println("测试可重入锁");
+        lock.unlock();
     }
 
     public void deduct7() {
