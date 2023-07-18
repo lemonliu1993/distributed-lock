@@ -71,7 +71,7 @@ public class DistributedRedisLock implements Lock {
                 " return 0 " +
                 "end";
 
-        while (!this.redisTemplate.execute(new DefaultRedisScript<Boolean>(script, Boolean.class), Arrays.asList(lockName), uuid, String.valueOf(expire))) {
+        while (!this.redisTemplate.execute(new DefaultRedisScript<Boolean>(script, Boolean.class), Arrays.asList(lockName), getId(), String.valueOf(expire))) {
             Thread.sleep(50);
         }
 
@@ -92,7 +92,7 @@ public class DistributedRedisLock implements Lock {
                 " return 0 " +
                 "end";
 
-        Long flag = this.redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList(lockName), uuid);
+        Long flag = this.redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList(lockName), getId());
         if (flag == null) {
             throw new IllegalMonitorStateException("this lock doesn't belong to you!");
         }
@@ -100,5 +100,13 @@ public class DistributedRedisLock implements Lock {
 
     public Condition newCondition() {
         return null;
+    }
+
+    /**
+     * 给线程拼接唯一标识
+     * @return
+     */
+    String getId(){
+        return uuid + ":" + Thread.currentThread().getId();
     }
 }
