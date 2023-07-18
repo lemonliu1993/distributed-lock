@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lemon.distributed.lock.mapper.StockMapper;
 import com.lemon.distributed.lock.pojo.Stock;
+import com.lemon.distributed.lock.util.DistributedLockClient;
+import com.lemon.distributed.lock.util.DistributedRedisLock;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -35,7 +37,34 @@ public class StockService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private DistributedLockClient distributedLockClient;
+
+
     public void deduct() {
+
+        DistributedRedisLock redisLock = this.distributedLockClient.getRedisLock("lock");
+        redisLock.lock();
+        try {
+            //  1.查询库存信息
+            String stock = redisTemplate.opsForValue().get("stock").toString();
+
+            //  2.判断库存是否充足
+            if (stock != null && stock.length() != 0) {
+                Integer st = Integer.valueOf(stock);
+                if (st > 0) {
+                    //  3.扣减库存
+                    redisTemplate.opsForValue().set("stock", String.valueOf(--st));
+                }
+            }
+        } finally {
+            redisLock.unlock();
+        }
+
+
+    }
+
+    public void deduct7() {
         String uuid = UUID.randomUUID().toString();
         //  加锁setnx
         while (!this.redisTemplate.opsForValue().setIfAbsent("lock", uuid, 5, TimeUnit.SECONDS)) {
