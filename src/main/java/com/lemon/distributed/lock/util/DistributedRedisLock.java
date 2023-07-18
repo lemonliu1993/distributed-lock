@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -26,10 +28,11 @@ public class DistributedRedisLock implements Lock {
 
     private long expire = 30;
 
-    public DistributedRedisLock(StringRedisTemplate redisTemplate, String lockName) {
+    public DistributedRedisLock(StringRedisTemplate redisTemplate, String lockName, String uuid) {
         this.redisTemplate = redisTemplate;
         this.lockName = lockName;
-        this.uuid = UUID.randomUUID().toString();
+//        this.uuid = UUID.randomUUID().toString();
+        this.uuid = uuid + ":" + Thread.currentThread().getId();
     }
 
 
@@ -71,10 +74,11 @@ public class DistributedRedisLock implements Lock {
                 " return 0 " +
                 "end";
 
-        while (!this.redisTemplate.execute(new DefaultRedisScript<Boolean>(script, Boolean.class), Arrays.asList(lockName), getId(), String.valueOf(expire))) {
+        while (!this.redisTemplate.execute(new DefaultRedisScript<Boolean>(script, Boolean.class), Arrays.asList(lockName), uuid, String.valueOf(expire))) {
             Thread.sleep(50);
         }
-
+        //  加锁成功，返回之前，开启定时器自动续期
+        this.renewExpire();
         return true;
     }
 
@@ -92,7 +96,7 @@ public class DistributedRedisLock implements Lock {
                 " return 0 " +
                 "end";
 
-        Long flag = this.redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList(lockName), getId());
+        Long flag = this.redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList(lockName), uuid);
         if (flag == null) {
             throw new IllegalMonitorStateException("this lock doesn't belong to you!");
         }
@@ -102,11 +106,22 @@ public class DistributedRedisLock implements Lock {
         return null;
     }
 
-    /**
-     * 给线程拼接唯一标识
-     * @return
-     */
-    String getId(){
-        return uuid + ":" + Thread.currentThread().getId();
+
+    private void renewExpire() {
+        String script = "if redis.call('hexists', KEYS[1],ARGV[1]) == 1 " +
+                "then " +
+                " return redis.call('expire', KEYS[1],ARGV[2]) " +
+                "else " +
+                " return 0 " +
+                "end";
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (redisTemplate.execute(new DefaultRedisScript<>(script, Boolean.class), Arrays.asList(lockName), uuid, String.valueOf(expire))) {
+                    renewExpire();
+                }
+            }
+        }, this.expire * 1000 / 3);
     }
+
 }
