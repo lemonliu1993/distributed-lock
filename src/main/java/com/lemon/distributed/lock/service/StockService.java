@@ -21,6 +21,8 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -63,7 +65,7 @@ public class StockService {
         }
     }
 
-    public void test(){
+    public void test() {
         DistributedRedisLock lock = this.distributedLockClient.getRedisLock("lock");
         lock.lock();
         System.out.println("测试可重入锁");
@@ -270,5 +272,15 @@ public class StockService {
         } finally {
             lock.unlock();
         }
+    }
+
+    public static void main(String[] args) {
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+        System.out.println("定时任务初始时间:" + System.currentTimeMillis());
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+                    System.out.println("定时任务的执行时间: " + System.currentTimeMillis());
+                }, 5, 10, TimeUnit.SECONDS
+
+        );
     }
 }
