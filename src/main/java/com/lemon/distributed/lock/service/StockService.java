@@ -18,9 +18,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -275,6 +273,7 @@ public class StockService {
     }
 
     public static void main(String[] args) {
+        /**
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
         System.out.println("定时任务初始时间:" + System.currentTimeMillis());
         scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -282,5 +281,14 @@ public class StockService {
                 }, 5, 10, TimeUnit.SECONDS
 
         );
+         */
+        System.out.println("定时任务初始时间:" + System.currentTimeMillis());
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("定时任务执行时间: "+ System.currentTimeMillis());
+            }
+        },5000,10000);
+
     }
 }
