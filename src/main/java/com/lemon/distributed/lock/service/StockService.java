@@ -7,6 +7,8 @@ import com.lemon.distributed.lock.pojo.Stock;
 import com.lemon.distributed.lock.util.DistributedLockClient;
 import com.lemon.distributed.lock.util.DistributedRedisLock;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
@@ -40,8 +42,32 @@ public class StockService {
     @Autowired
     private DistributedLockClient distributedLockClient;
 
+    @Autowired
+    private RedissonClient redissonClient;
 
     public void deduct() {
+        RLock lock = redissonClient.getLock("lock");
+        lock.lock(10, TimeUnit.SECONDS);
+        try {
+            //  1.查询库存信息
+            String stock = redisTemplate.opsForValue().get("stock").toString();
+
+            //  2.判断库存是否充足
+            if (stock != null && stock.length() != 0) {
+                Integer st = Integer.valueOf(stock);
+                if (st > 0) {
+                    //  3.扣减库存
+                    redisTemplate.opsForValue().set("stock", String.valueOf(--st));
+                }
+            }
+//            this.test();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    public void deduct8() {
 
         DistributedRedisLock redisLock = this.distributedLockClient.getRedisLock("lock");
         redisLock.lock();
@@ -274,21 +300,21 @@ public class StockService {
 
     public static void main(String[] args) {
         /**
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
-        System.out.println("定时任务初始时间:" + System.currentTimeMillis());
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-                    System.out.println("定时任务的执行时间: " + System.currentTimeMillis());
-                }, 5, 10, TimeUnit.SECONDS
+         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+         System.out.println("定时任务初始时间:" + System.currentTimeMillis());
+         scheduledExecutorService.scheduleAtFixedRate(() -> {
+         System.out.println("定时任务的执行时间: " + System.currentTimeMillis());
+         }, 5, 10, TimeUnit.SECONDS
 
-        );
+         );
          */
         System.out.println("定时任务初始时间:" + System.currentTimeMillis());
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                System.out.println("定时任务执行时间: "+ System.currentTimeMillis());
+                System.out.println("定时任务执行时间: " + System.currentTimeMillis());
             }
-        },5000,10000);
+        }, 5000, 10000);
 
     }
 }
