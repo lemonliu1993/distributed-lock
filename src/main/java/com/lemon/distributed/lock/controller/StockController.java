@@ -40,4 +40,10 @@ public class StockController {
         this.stockService.testWriteLock();
         return "hello test write lock";
     }
+
+    @GetMapping("test/semaphore")
+    public String testSemaphore() {
+        this.stockService.testSemaphore();
+        return "hello semaphore";
+    }
 }

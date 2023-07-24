@@ -9,6 +9,7 @@ import com.lemon.distributed.lock.util.DistributedRedisLock;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RReadWriteLock;
+import org.redisson.api.RSemaphore;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -364,5 +365,21 @@ public class StockService {
                     }, i + "号车"
             ).start();
         }
+    }
+
+    public void testSemaphore() {
+        RSemaphore semaphore = this.redissonClient.getSemaphore("semaphore");
+        semaphore.trySetPermits(3); //设置资源量 限流的线程数
+        try {
+            semaphore.acquire();    //获取资源，获取资源成功的线程可以继续处理业务操作，否则会被阻塞住
+//            System.out.println("10010获取了资源，开始处理业务逻辑." + Thread.currentThread().getName());
+            this.redisTemplate.opsForList().rightPush("log", "10010获取了资源,开始处理业务逻辑." + Thread.currentThread().getName());
+            TimeUnit.SECONDS.sleep(10 + new Random().nextInt(10));
+            System.out.println("10010处理完业务逻辑，释放资源=====================." + Thread.currentThread().getName());
+            semaphore.release();    //手动释放资源，后续请求线程就可以获取资源
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 }
