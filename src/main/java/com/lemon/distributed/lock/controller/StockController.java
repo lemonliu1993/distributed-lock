@@ -4,6 +4,7 @@ import com.lemon.distributed.lock.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -16,8 +17,15 @@ public class StockController {
     private StockService stockService;
 
     @GetMapping("stock/deduct")
-    public String deduct(){
+    public String deduct() {
         this.stockService.deduct();
         return "hello stock deduct";
+    }
+
+
+    @GetMapping("test/fair/lock/{id}")
+    public String testFailLock(@PathVariable("id") Long id) {
+        this.stockService.testFairLock(id);
+        return "hello test fair lock";
     }
 }

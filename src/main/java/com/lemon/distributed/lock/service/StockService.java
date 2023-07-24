@@ -317,4 +317,17 @@ public class StockService {
         }, 5000, 10000);
 
     }
+
+    public void testFairLock(Long id) {
+        RLock fairLock = this.redissonClient.getFairLock("fairLock");
+        fairLock.lock();
+        try {
+            TimeUnit.SECONDS.sleep(10);
+            System.out.println("测试公平锁================================" + id);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            fairLock.unlock();
+        }
+    }
 }
