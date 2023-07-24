@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -299,25 +300,25 @@ public class StockService {
         }
     }
 
-    public static void main(String[] args) {
-        /**
-         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
-         System.out.println("定时任务初始时间:" + System.currentTimeMillis());
-         scheduledExecutorService.scheduleAtFixedRate(() -> {
-         System.out.println("定时任务的执行时间: " + System.currentTimeMillis());
-         }, 5, 10, TimeUnit.SECONDS
-
-         );
-         */
-        System.out.println("定时任务初始时间:" + System.currentTimeMillis());
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("定时任务执行时间: " + System.currentTimeMillis());
-            }
-        }, 5000, 10000);
-
-    }
+//    public static void main(String[] args) {
+//        /**
+//         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+//         System.out.println("定时任务初始时间:" + System.currentTimeMillis());
+//         scheduledExecutorService.scheduleAtFixedRate(() -> {
+//         System.out.println("定时任务的执行时间: " + System.currentTimeMillis());
+//         }, 5, 10, TimeUnit.SECONDS
+//
+//         );
+//         */
+//        System.out.println("定时任务初始时间:" + System.currentTimeMillis());
+//        new Timer().schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//                System.out.println("定时任务执行时间: " + System.currentTimeMillis());
+//            }
+//        }, 5000, 10000);
+//
+//    }
 
     public void testFairLock(Long id) {
         RLock fairLock = this.redissonClient.getFairLock("fairLock");
@@ -344,5 +345,24 @@ public class StockService {
         rwLock.writeLock().lock(10, TimeUnit.SECONDS);
         //TODO 一顿写操作。。。
 //        rwLock.writeLock().unlock();
+    }
+
+    public static void main(String[] args) {
+        Semaphore semaphore = new Semaphore(3);
+        for (int i = 0; i < 6; i++) {
+            new Thread(
+                    () -> {
+                        try {
+                            semaphore.acquire();
+                            System.out.println(Thread.currentThread().getName() + "抢到了停车位");
+                            TimeUnit.SECONDS.sleep(new Random().nextInt(10));
+                            System.out.println(Thread.currentThread().getName() + "停了一会儿开走了!");
+                            semaphore.release();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }, i + "号车"
+            ).start();
+        }
     }
 }
