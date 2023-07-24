@@ -8,6 +8,7 @@ import com.lemon.distributed.lock.util.DistributedLockClient;
 import com.lemon.distributed.lock.util.DistributedRedisLock;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
+import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -329,5 +330,19 @@ public class StockService {
         } finally {
             fairLock.unlock();
         }
+    }
+
+    public void testReadLock() {
+        RReadWriteLock rwLock = this.redissonClient.getReadWriteLock("rwLock");
+        rwLock.readLock().lock(10, TimeUnit.SECONDS);
+        //TODO 一顿读操作。。。
+//        rwLock.readLock().unlock();
+    }
+
+    public void testWriteLock() {
+        RReadWriteLock rwLock = this.redissonClient.getReadWriteLock("rwLock");
+        rwLock.writeLock().lock(10, TimeUnit.SECONDS);
+        //TODO 一顿写操作。。。
+//        rwLock.writeLock().unlock();
     }
 }

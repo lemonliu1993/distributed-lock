@@ -28,4 +28,16 @@ public class StockController {
         this.stockService.testFairLock(id);
         return "hello test fair lock";
     }
+
+    @GetMapping("test/read/lock")
+    public String testReadLock() {
+        this.stockService.testReadLock();
+        return "hello test read lock";
+    }
+
+    @GetMapping("test/write/lock")
+    public String testWriteLock() {
+        this.stockService.testWriteLock();
+        return "hello test write lock";
+    }
 }
