@@ -11,7 +11,7 @@ public class StockService {
 
     private Stock stock = new Stock();
 
-    public void deduct() {
+    public synchronized void deduct() {
         stock.setStock(stock.getStock() - 1);
         System.out.println("库存余量: " + stock.getStock());
     }
