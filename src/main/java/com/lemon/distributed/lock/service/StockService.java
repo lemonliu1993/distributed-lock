@@ -9,6 +9,7 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -25,7 +26,24 @@ public class StockService {
     private StockMapper stockMapper;
 
 
-    public  void deduct() {
+    @Transactional
+    public void deduct(){
+        //1.查询库存信息并锁定库存信息
+        List<Stock> stocks = this.stockMapper.queryStock("1001");
+        //这里取第一个库存
+        Stock stock = stocks.get(0);
+
+        //2.判断库存是否充足
+        if(stock != null && stock.getCount() >0){
+            //3.扣减库存
+            stock.setCount(stock.getCount()-1);
+            stockMapper.updateById(stock);
+        }
+    }
+
+
+    @Transactional
+    public  void deduct2() {
         stockMapper.updateStock("1001",1);
 //        Stock stock = stockMapper.selectOne(new QueryWrapper<Stock>().eq("product_code", "1001"));
 //        if (stock != null && stock.getCount() > 0) {
