@@ -16,5 +16,6 @@ public class Stock {
     private String productCode;
     private String warehouse;
     private Integer count;
+    private Integer version;
 //    private Integer stock = 5000;
 }
